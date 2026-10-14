@@ -33,3 +33,6 @@ build/
 .vscode/
 
 .env
+
+dev-env.ps1
+nbactions.xml
