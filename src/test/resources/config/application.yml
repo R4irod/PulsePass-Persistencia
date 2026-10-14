@@ -1,0 +1,5 @@
+
+pulsepass:
+  security:
+    jwt:
+      secret-base64: dGVzdC1vbmx5LWtleS1kby1ub3QtdXNlLWluLXByb2Q=
