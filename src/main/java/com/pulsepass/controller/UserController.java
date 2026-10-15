@@ -2,6 +2,7 @@ package com.pulsepass.controller;
 
 import com.pulsepass.dto.request.RegisterUserRequest;
 import com.pulsepass.dto.response.UserResponse;
+import com.pulsepass.service.AuthService;
 import com.pulsepass.service.UserService;
 
 import jakarta.validation.Valid;
@@ -24,15 +25,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, AuthService authService) {
         this.userService = userService;
+        this.authService = authService;
     }
 
-    // POST /api/users  -> 201 Created
+    // POST /api/users  -> 201 Created (usuario + credencial + rol USER, atómico)
     @PostMapping
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterUserRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.register(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
     // GET /api/users/by-email?email=...

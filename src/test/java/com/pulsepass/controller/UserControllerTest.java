@@ -33,7 +33,7 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
-
+    
     private static final String VALID_REGISTER_JSON = """
             {
               "username": "andrea",

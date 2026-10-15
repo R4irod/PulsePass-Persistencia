@@ -37,9 +37,9 @@ class UserServiceImplTest {
     private UserServiceImpl service;
 
     private RegisterUserRequest validRequest() {
-        return new RegisterUserRequest(
+                return new RegisterUserRequest(
                 "andrea", "andrea@email.com", "Andrea", "Gomez",
-                "3001234567", "Santa Marta", LocalDate.of(1998, 5, 10));
+                "3001234567", "Santa Marta", LocalDate.of(1998, 5, 10), "UnaFraseSeguraLarga2026!");
     }
 
     // ---------- TEST-USER-001: registro válido ----------
@@ -88,7 +88,7 @@ class UserServiceImplTest {
     void shouldThrowWhenBirthDateIsInFuture() {
         RegisterUserRequest request = new RegisterUserRequest(
                 "andrea", "andrea@email.com", "Andrea", "Gomez",
-                "3001234567", "Santa Marta", LocalDate.now().plusDays(1));
+                "3001234567", "Santa Marta", LocalDate.now().plusDays(1), "UnaFraseSeguraLarga2026!");
 
         when(repository.existsByUsername("andrea")).thenReturn(false);
         when(repository.existsByEmailIgnoreCase("andrea@email.com")).thenReturn(false);
