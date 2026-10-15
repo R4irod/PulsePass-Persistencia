@@ -36,6 +36,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import org.springframework.security.access.AccessDeniedException;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
@@ -124,8 +125,8 @@ class SecurityMatrixTest {
                 Arguments.of("POST", "/api/auth/login", true, true, true, true),
 
                 // Cualquier usuario autenticado (la propiedad se afina en el Paso 7)
-                Arguments.of("GET", "/api/events/CMF-2026", false, true, true, true),            // Paso 7 lo abre
-                Arguments.of("GET", "/api/events/by-artist?stageName=SolarBeat", false, true, true, true), // Paso 7
+                Arguments.of("GET", "/api/events/CMF-2026", true, true, true, true),
+                Arguments.of("GET", "/api/events/by-artist?stageName=SolarBeat", true, true, true, true),
                 Arguments.of("GET", "/api/users/by-email?email=a@test.com", false, true, true, true),
                 Arguments.of("GET", "/api/users/by-username?username=andrea", false, true, true, true),
                 Arguments.of("GET", "/api/tickets/TKT-1", false, true, true, true),
@@ -190,6 +191,17 @@ class SecurityMatrixTest {
         mockMvc.perform(get("/api/events/published"))
                 .andExpect(status().isOk())
                 .andExpect(cookie().doesNotExist("JSESSIONID"));
+    }
+    
+    @Test
+    void methodSecurityDenialIsMappedTo403Json() throws Exception {
+        when(ticketService.findByCode("TCK-AJENO")).thenThrow(new AccessDeniedException("denegado"));
+
+        mockMvc.perform(get("/api/tickets/TCK-AJENO").header(HttpHeaders.AUTHORIZATION, bearer(USER_ID)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.details").isMap());
     }
 
     // ---------- tokens inválidos ----------

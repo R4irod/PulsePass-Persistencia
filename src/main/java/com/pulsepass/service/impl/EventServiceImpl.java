@@ -15,6 +15,7 @@ import com.pulsepass.repository.ArtistRepository;
 import com.pulsepass.repository.EventRepository;
 import com.pulsepass.repository.VenueRepository;
 import com.pulsepass.service.EventService;
+import com.pulsepass.service.AuthorizationService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,15 +31,18 @@ public class EventServiceImpl implements EventService {
     private final VenueRepository venueRepository;
     private final ArtistRepository artistRepository;
     private final EventMapper mapper;
+    private final AuthorizationService authorizationService;
 
     public EventServiceImpl(EventRepository eventRepository,
                              VenueRepository venueRepository,
                              ArtistRepository artistRepository,
-                             EventMapper mapper) {
+                             EventMapper mapper,
+                             AuthorizationService authorizationService) {
         this.eventRepository = eventRepository;
         this.venueRepository = venueRepository;
         this.artistRepository = artistRepository;
         this.mapper = mapper;
+        this.authorizationService = authorizationService;
     }
 
     @Override
@@ -93,10 +97,17 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventResponse findByCode(String eventCode) {
-        return eventRepository.findByEventCode(eventCode)
-                .map(mapper::toResponse)
+        Event event = eventRepository.findByEventCode(eventCode)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Event not found: " + eventCode));
+
+        // FR-SECEVT-02: solo STAFF/ADMIN ven eventos no publicados. Para el resto se responde
+        // igual que si no existiera (404), para no revelar la existencia de borradores.
+        if (event.getStatus() != EventStatus.PUBLISHED && !authorizationService.isStaffOrAdmin()) {
+            throw new ResourceNotFoundException("Event not found: " + eventCode);
+        }
+
+        return mapper.toResponse(event);
     }
 
     @Override
@@ -172,8 +183,12 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventSummaryResponse> findByArtist(String stageName) {
+        // FR-SECEVT-06: el público solo ve eventos publicados.
+        boolean privileged = authorizationService.isStaffOrAdmin();
+
         return eventRepository.findByArtistStageName(stageName)
                 .stream()
+                .filter(event -> privileged || event.getStatus() == EventStatus.PUBLISHED)
                 .map(mapper::toSummary)
                 .toList();
     }

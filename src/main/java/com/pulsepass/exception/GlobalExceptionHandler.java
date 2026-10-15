@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import org.springframework.security.access.AccessDeniedException;
 
 /**
  * Único punto de traducción Excepción -> HTTP (CTRL-007). Los controllers no
@@ -113,6 +114,14 @@ public class GlobalExceptionHandler {
         @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
         return build(HttpStatus.UNAUTHORIZED, ex.getMessage(), Map.of());
+    }
+    
+    
+    // ---------------------------------------------------------------- seguridad (método)
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this operation", Map.of());
     }
 
     // ---------------------------------------------------------------- 500

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @Service
 @Transactional(readOnly = true)
@@ -70,6 +71,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @PreAuthorize("@authorizationService.canReadUserByEmail(#email)")
     public UserResponse findByEmail(String email) {
         return repository.findByEmailIgnoreCase(email)
                 .map(mapper::toResponse)
@@ -78,6 +80,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @PreAuthorize("@authorizationService.canReadUserByUsername(#username)")
     public UserResponse findByUsername(String username) {
         return repository.findByUsername(username)
                 .map(mapper::toResponse)

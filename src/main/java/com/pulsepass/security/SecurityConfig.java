@@ -54,9 +54,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/api/tickets/*/use").hasAnyRole("STAFF", "ADMIN")
                         // ---- Compra de tickets: solo USER
                         .requestMatchers(HttpMethod.POST, "/api/tickets").hasRole("USER")
-                        // ---- Todo lo demás exige autenticación (cierre por defecto, SEC001).
-                        // GET /api/events/{eventCode} y /api/events/by-artist quedan aquí
-                        // hasta el Paso 7, que los abre con filtro de eventos publicados.
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/venues/**", "/api/artists/**", "/api/events/*").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

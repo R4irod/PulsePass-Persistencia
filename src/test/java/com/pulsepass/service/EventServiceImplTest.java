@@ -6,6 +6,7 @@ import com.pulsepass.domain.EventStatus;
 import com.pulsepass.domain.Venue;
 import com.pulsepass.dto.request.CreateEventRequest;
 import com.pulsepass.dto.response.EventResponse;
+import com.pulsepass.dto.response.EventSummaryResponse;
 import com.pulsepass.exception.BusinessRuleException;
 import com.pulsepass.exception.ResourceNotFoundException;
 import com.pulsepass.mapper.EventMapper;
@@ -30,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class EventServiceImplTest {
@@ -43,6 +45,9 @@ class EventServiceImplTest {
     @Mock
     private ArtistRepository artistRepository;
 
+    @Mock
+    private AuthorizationService authorizationService;
+        
     @Mock
     private EventMapper mapper;
 
@@ -73,6 +78,7 @@ class EventServiceImplTest {
 
         when(eventRepository.findByEventCode("CMF-2026")).thenReturn(Optional.of(event));
         when(mapper.toResponse(event)).thenReturn(response);
+        when(authorizationService.isStaffOrAdmin()).thenReturn(true);
 
         EventResponse result = service.findByCode("CMF-2026");
 
@@ -187,5 +193,71 @@ class EventServiceImplTest {
                 .isInstanceOf(BusinessRuleException.class);
 
         verify(eventRepository, never()).save(any());
+    }
+        // ---------- visibilidad de eventos no publicados ----------
+
+    private Event eventWithStatus(String code, EventStatus status) {
+        Venue venue = activeVenue();
+        Event event = new Event(code, "Evento " + code, "Descripción",
+                EventCategory.MUSIC, status, LocalDateTime.now().plusMonths(1), 18);
+        venue.addEvent(event);
+        return event;
+    }
+
+    private EventSummaryResponse summary(Event event) {
+        return new EventSummaryResponse(1L, event.getEventCode(), event.getName(), event.getCategory(),
+                event.getStatus(), event.getEventDate(), "Marina Convention Center");
+    }
+
+    @Test
+    void nonPrivilegedCallerGetsNotFoundForDraftEvent() {
+        Event draft = eventWithStatus("CMF-2026", EventStatus.DRAFT);
+        when(eventRepository.findByEventCode("CMF-2026")).thenReturn(Optional.of(draft));
+        // authorizationService.isStaffOrAdmin() devuelve false por defecto
+
+        assertThatThrownBy(() -> service.findByCode("CMF-2026"))
+                .isInstanceOf(ResourceNotFoundException.class);
+
+        verify(mapper, never()).toResponse(any());
+    }
+
+    @Test
+    void anyoneCanReadPublishedEventByCode() {
+        Event published = eventWithStatus("CMF-2026", EventStatus.PUBLISHED);
+        EventResponse response = new EventResponse(1L, "CMF-2026", "Evento CMF-2026", "Descripción",
+                EventCategory.MUSIC, EventStatus.PUBLISHED, published.getEventDate(), 18,
+                "VEN-SMR-01", "Marina Convention Center", List.of());
+        when(eventRepository.findByEventCode("CMF-2026")).thenReturn(Optional.of(published));
+        when(mapper.toResponse(published)).thenReturn(response);
+
+        assertThat(service.findByCode("CMF-2026")).isEqualTo(response);
+        verifyNoInteractions(authorizationService);
+    }
+
+    @Test
+    void publicSearchByArtistHidesNonPublishedEvents() {
+        Event published = eventWithStatus("PUB-1", EventStatus.PUBLISHED);
+        Event draft = eventWithStatus("DRAFT-1", EventStatus.DRAFT);
+        when(eventRepository.findByArtistStageName("Solar Beat")).thenReturn(List.of(published, draft));
+        when(mapper.toSummary(published)).thenReturn(summary(published));
+
+        List<EventSummaryResponse> result = service.findByArtist("Solar Beat");
+
+        assertThat(result).extracting(EventSummaryResponse::eventCode).containsExactly("PUB-1");
+        verify(mapper, never()).toSummary(draft);
+    }
+
+    @Test
+    void staffSearchByArtistSeesEverything() {
+        Event published = eventWithStatus("PUB-1", EventStatus.PUBLISHED);
+        Event draft = eventWithStatus("DRAFT-1", EventStatus.DRAFT);
+        when(authorizationService.isStaffOrAdmin()).thenReturn(true);
+        when(eventRepository.findByArtistStageName("Solar Beat")).thenReturn(List.of(published, draft));
+        when(mapper.toSummary(published)).thenReturn(summary(published));
+        when(mapper.toSummary(draft)).thenReturn(summary(draft));
+
+        assertThat(service.findByArtist("Solar Beat"))
+                .extracting(EventSummaryResponse::eventCode)
+                .containsExactly("PUB-1", "DRAFT-1");
     }
 }
