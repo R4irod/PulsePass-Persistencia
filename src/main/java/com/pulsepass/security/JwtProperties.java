@@ -11,6 +11,10 @@ public record JwtProperties(String issuer, String secretBase64, Duration accessT
     private static final int MIN_KEY_BYTES = 32;
 
     public JwtProperties {
+        if (issuer == null || issuer.isBlank()) {
+        throw new IllegalArgumentException("pulsepass.security.jwt.issuer es obligatorio");
+        }
+        
         if (secretBase64 == null || secretBase64.isBlank() || secretBase64.startsWith("${")) {
             throw new IllegalArgumentException(
                     "Falta la clave JWT: defina PULSEPASS_JWT_SECRET_BASE64");
