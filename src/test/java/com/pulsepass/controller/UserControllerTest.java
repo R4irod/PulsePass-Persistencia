@@ -5,6 +5,7 @@ import com.pulsepass.dto.response.UserResponse;
 import com.pulsepass.exception.DuplicateResourceException;
 import com.pulsepass.exception.ResourceNotFoundException;
 import com.pulsepass.service.UserService;
+import com.pulsepass.service.AuthService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.time.LocalDate;
 
@@ -26,6 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
+@Import(ControllerTestSecurityConfig.class)
+@WithMockUser(roles = "USER")
 class UserControllerTest {
 
     @Autowired
@@ -33,6 +38,9 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+    
+    @MockitoBean
+    private AuthService authService;
     
     private static final String VALID_REGISTER_JSON = """
             {
@@ -42,7 +50,8 @@ class UserControllerTest {
               "lastName": "Gomez",
               "phone": "3001234567",
               "city": "Santa Marta",
-              "birthDate": "1999-05-20"
+              "birthDate": "1999-05-20",
+              "password": "UnaFraseSeguraLarga2026!"
             }
             """;
 
@@ -55,7 +64,7 @@ class UserControllerTest {
     // TEST-CTRL-USR-001 — registrar válido -> 201
     @Test
     void shouldReturn201WhenRegisteringValidUser() throws Exception {
-        when(userService.register(any(RegisterUserRequest.class))).thenReturn(andrea());
+        when(authService.register(any(RegisterUserRequest.class))).thenReturn(andrea());
 
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -66,7 +75,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").value("andrea@email.com"))
                 .andExpect(jsonPath("$.active").value(true));
 
-        verify(userService).register(any(RegisterUserRequest.class));
+	verify(authService).register(any(RegisterUserRequest.class));
     }
 
     // TEST-CTRL-USR-002 — email inválido -> 400; el Service NO se invoca
@@ -83,7 +92,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Validation failed"))
                 .andExpect(jsonPath("$.details.email").value("Email must be valid"));
 
-        verify(userService, never()).register(any());
+        verify(authService, never()).register(any());
     }
 
     @Test
@@ -98,13 +107,13 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.details.lastName").value("Last name is required"))
                 .andExpect(jsonPath("$.details.birthDate").value("Birth date is required"));
 
-        verify(userService, never()).register(any());
+        verify(authService, never()).register(any());
     }
 
     // TEST-CTRL-USR-003 — username duplicado -> 409
     @Test
     void shouldReturn409WhenUsernameIsDuplicated() throws Exception {
-        when(userService.register(any(RegisterUserRequest.class)))
+        when(authService.register(any(RegisterUserRequest.class)))
                 .thenThrow(new DuplicateResourceException("Username already exists."));
 
         mockMvc.perform(post("/api/users")
@@ -120,7 +129,7 @@ class UserControllerTest {
     // AC-CTRL-008 — email duplicado -> 409 sin exponer detalles internos
     @Test
     void shouldReturn409WhenEmailIsDuplicated() throws Exception {
-        when(userService.register(any(RegisterUserRequest.class)))
+        when(authService.register(any(RegisterUserRequest.class)))
                 .thenThrow(new DuplicateResourceException("Email already exists."));
 
         mockMvc.perform(post("/api/users")
