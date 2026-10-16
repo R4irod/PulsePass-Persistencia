@@ -249,3 +249,78 @@ src/test/java/com/pulsepass
 ## Fuera de alcance
 
 Autenticación/autorización (Spring Security, JWT), OpenAPI/Swagger, paginación, versionado de API (`/api/v1`), CORS avanzado, pruebas E2E y Testcontainers en pruebas de controller. Ningún endpoint está protegido: en este MVP todos son conceptualmente públicos.
+
+## Fase 4 — Seguridad (Spring Security + JWT)
+
+La API es **stateless**: cada request lleva `Authorization: Bearer <jwt>`. No hay sesiones ni cookies.
+Las contraseñas se guardan con **BCrypt**; los tokens son JWT **HS256** de 15 minutos firmados con JJWT.
+
+### Variables de entorno
+
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `PULSEPASS_JWT_SECRET_BASE64` | Sí | Clave HMAC en Base64 de **al menos 32 bytes**. La app no arranca sin ella. |
+| `PULSEPASS_JWT_ISSUER` | No | Emisor del token (por defecto `pulsepass-api`). |
+| `DB_URL`, `DB_USER`, `DB_PASSWORD` | No | Conexión a PostgreSQL. |
+
+Generar una clave (PowerShell): `$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [Convert]::ToBase64String($b)`
+Linux/Mac: `openssl rand -base64 32`. Ver `.env.example`. **Nunca** se versiona un secreto real.
+
+### Flujo de autenticación
+
+1. `POST /api/users` crea la cuenta (usuario + hash BCrypt + rol `USER`, en una sola transacción). Contraseña de 12 a 72 caracteres. El username no puede contener `@` ni espacios.
+2. `POST /api/auth/login` con `{"identifier": "usuario o correo", "password": "..."}` devuelve `{"accessToken", "tokenType": "Bearer", "expiresIn": 900}`.
+3. `GET /api/auth/me` devuelve `{id, username, email, roles}` del token enviado.
+
+El token solo lleva `sub` (ID del usuario), `iss`, `iat`, `exp` y `jti`. Los **roles y el estado activo se leen de la base en cada request**: desactivar a un usuario o quitarle un rol surte efecto de inmediato, aunque su token siga vigente.
+
+### Roles y permisos (las 20 operaciones)
+
+| Operación | Anónimo | USER | STAFF | ADMIN |
+|---|---|---|---|---|
+| GET `/api/venues/{code}`, `/api/venues/active` | ✔ | ✔ | ✔ | ✔ |
+| GET `/api/artists/{id}`, `/by-stage-name`, `/active` | ✔ | ✔ | ✔ | ✔ |
+| GET `/api/events/published` | ✔ | ✔ | ✔ | ✔ |
+| GET `/api/events/{eventCode}`, `/api/events/by-artist` | solo publicados | solo publicados | todos | todos |
+| POST `/api/events` | 401 | 403 | 403 | ✔ |
+| PATCH `/api/events/{eventCode}/publish` | 401 | 403 | 403 | ✔ |
+| POST `/api/events/{eventCode}/artists/{artistId}` | 401 | 403 | 403 | ✔ |
+| POST `/api/users` (rol inicial siempre `USER`) | ✔ | ✔ | ✔ | ✔ |
+| GET `/api/users/by-email`, `/by-username` | 401 | solo los propios | solo los propios | cualquiera |
+| POST `/api/tickets` | 401 | ✔ solo con su propio email | 403 (sin rol USER) | 403 (sin rol USER) |
+| GET `/api/tickets/{ticketCode}` | 401 | solo propios | cualquiera | cualquiera |
+| GET `/api/tickets/by-user?email=` | 401 | solo el propio | solo el propio | cualquiera |
+| GET `/api/events/{eventCode}/tickets/paid` | 401 | 403 | ✔ | ✔ |
+| PATCH `/api/tickets/{ticketCode}/cancel` | 401 | solo propios | solo propios | cualquiera |
+| PATCH `/api/tickets/{ticketCode}/use` | 401 | 403 | ✔ | ✔ |
+
+Política anti-IDOR: un `USER` recibe **403** tanto si el ticket (o usuario) es de otra persona como si no existe, para que no pueda descubrir qué códigos existen. Los eventos no publicados responden **404** al público.
+La comparación de propiedad se hace siempre por **ID persistente**, nunca por un email o ID enviado por el cliente.
+
+### Errores
+
+Todos usan el mismo `ErrorResponse` (`timestamp, status, error, message, details`): 400 validación, 401 sin identidad válida (con `WWW-Authenticate: Bearer`), 403 sin permiso, 404, 409 regla de negocio, 500 sin trazas.
+
+### Cuentas de prueba
+
+El registro público **nunca** crea `STAFF` ni `ADMIN`. Para desarrollo: registrar las cuentas por la API y ejecutar `scripts/demo-seed.sql`, que asigna `laura` = STAFF y `miguel` = ADMIN y crea el evento `CMF-2026` en borrador.
+
+### Verificación
+
+```bash
+./mvnw test                       # todo (requiere Docker para Testcontainers)
+./mvnw test -Dtest="!*ControllerTest"
+```
+
+Pruebas de seguridad: `JwtServiceTest`, `JwtPropertiesTest`, `JwtAuthenticationFilterTest`, `AuthorizationServiceTest`, `AuthServiceTest`, `SecurityMatrixTest` (matriz ruta × rol con filtros reales), `OwnershipSecurityIntegrationTest` y `AuthServiceIntegrationTest` (PostgreSQL real).
+
+### Límites conocidos (no implementado, deliberadamente)
+
+- Sin refresh tokens, logout con revocación (`jti` denylist), MFA, recuperación de contraseña ni cambio de contraseña. El logout del cliente no invalida tokens ya emitidos: vencen a los 15 minutos.
+- Sin límite de intentos de login ni bloqueo contra fuerza bruta (en producción: rate limiting, monitoreo y alertas).
+- Clave HMAC simétrica sin rotación; en producción usar un gestor de secretos, identificadores de clave y rotación.
+- STAFF es **global**: puede ver y marcar como usada cualquier entrada, porque el dominio no modela asignación de personal a eventos (futura entidad `EventStaffAssignment`).
+- Los usuarios anteriores a la fase 4 no tienen credenciales y no pueden iniciar sesión hasta una activación segura; no se asignan contraseñas por defecto.
+- Solo `PUBLISHED` es público: `SOLD_OUT`, `CANCELLED` y `FINISHED` se tratan como no publicados.
+- Trazabilidad: se registran logins correctos y fallidos, tokens rechazados y accesos denegados, sin credenciales. Falta un *request ID* de correlación.
+- HTTPS es obligatorio fuera de localhost; CORS no está configurado.

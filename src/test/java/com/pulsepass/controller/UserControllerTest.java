@@ -73,8 +73,8 @@ class UserControllerTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.username").value("andrea"))
                 .andExpect(jsonPath("$.email").value("andrea@email.com"))
-                .andExpect(jsonPath("$.active").value(true));
-
+                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.password").doesNotExist());
 	verify(authService).register(any(RegisterUserRequest.class));
     }
 
@@ -175,5 +175,31 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.username").value("andrea"));
 
         verify(userService).findByUsername("andrea");
+    }
+    
+    @Test
+    void shouldReturn400WhenPasswordIsTooShort() throws Exception {
+        String json = VALID_REGISTER_JSON.replace("UnaFraseSeguraLarga2026!", "corta");
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details.password").value("Password must be between 12 and 72 characters"));
+
+        verify(authService, never()).register(any());
+    }
+
+    @Test
+    void shouldReturn400WhenUsernameContainsAtSign() throws Exception {
+        String json = VALID_REGISTER_JSON.replace("\"username\": \"andrea\"", "\"username\": \"andrea@x\"");
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details.username").value("Username must not contain '@' or whitespace"));
+
+        verify(authService, never()).register(any());
     }
 }

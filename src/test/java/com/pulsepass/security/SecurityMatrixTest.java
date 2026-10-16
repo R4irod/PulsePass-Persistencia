@@ -1,5 +1,8 @@
 package com.pulsepass.security;
 
+import com.pulsepass.dto.request.LoginRequest;
+import com.pulsepass.dto.response.AuthResponse;
+import com.pulsepass.exception.InvalidCredentialsException;
 import com.pulsepass.service.ArtistService;
 import com.pulsepass.service.AuthService;
 import com.pulsepass.service.EventService;
@@ -32,6 +35,7 @@ import java.time.ZoneOffset;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -281,5 +285,47 @@ class SecurityMatrixTest {
         when(userDetailsService.loadUserById(ADMIN_ID)).thenReturn(principal(ADMIN_ID, true, "ROLE_USER"));
 
         assertThat(statusOf("POST", "/api/events", token)).isEqualTo(403);
+    }
+    
+        // T-SEC-005: login correcto -> 200 con Bearer (anónimo)
+    @Test
+    void loginReturnsBearerTokenResponse() throws Exception {
+        when(authService.login(any(LoginRequest.class))).thenReturn(new AuthResponse("jwt-ficticio", "Bearer", 900L));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"identifier\":\"andrea\",\"password\":\"UnaFraseSeguraLarga2026!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresIn").value(900));
+    }
+
+    // T-SEC-019: un login fallido no filtra ni la contraseña ni trazas internas
+    @Test
+    void failedLoginReturns401WithoutLeakingDetails() throws Exception {
+        when(authService.login(any(LoginRequest.class))).thenThrow(new InvalidCredentialsException());
+
+        String body = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"identifier\":\"andrea\",\"password\":\"clave-incorrecta-123\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Invalid credentials"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain("clave-incorrecta-123").doesNotContain("trace").doesNotContain("Exception");
+    }
+
+    // T-SEC-018: autorizado pero con cuerpo inválido -> 400 de Bean Validation, el Service no se invoca
+    @Test
+    void invalidRequestFromAuthorizedUserGets400() throws Exception {
+        mockMvc.perform(post("/api/events")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ADMIN_ID))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"));
+
+        verifyNoInteractions(eventService);
     }
 }

@@ -26,6 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import static org.springframework.web.server.ServerWebExchangeExtensionsKt.principal;
 
 /**
  * Orquesta registro y login. No reemplaza a UserService: las reglas de negocio
@@ -44,6 +47,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     public AuthService(UserService userService,
                        UserRepository userRepository,
@@ -90,14 +94,15 @@ public class AuthService {
                     UsernamePasswordAuthenticationToken.unauthenticated(
                             request.identifier(), request.password()));
         } catch (AuthenticationException | IllegalArgumentException e) {
-            // Clave incorrecta, usuario inexistente, inactivo, sin credenciales...
+            log.warn("Login failed for identifier '{}'", sanitize(request.identifier()));
             throw new InvalidCredentialsException();
         }
 
         if (!(authentication.getPrincipal() instanceof SecurityPrincipal principal)) {
             throw new InvalidCredentialsException();
         }
-
+        
+        log.info("Login succeeded for userId={}", principal.getId());
         String token = jwtService.generateAccessToken(principal.getId());
         return new AuthResponse(token, TOKEN_TYPE, jwtService.getAccessTokenTtlSeconds());
     }
@@ -113,5 +118,10 @@ public class AuthService {
 
         return new AuthenticatedUserResponse(
                 principal.getId(), principal.getUsername(), principal.getEmail(), roles);
+    }
+
+    // Evita inyección de líneas falsas en los logs desde el identificador del login.
+    private static String sanitize(String value) {
+        return value == null ? "" : value.replaceAll("[\\r\\n\\t]", "_");
     }
 }

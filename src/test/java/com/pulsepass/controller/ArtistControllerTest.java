@@ -17,12 +17,14 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import org.springframework.context.annotation.Import;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ArtistController.class)
+@Import(ControllerTestSecurityConfig.class)
 class ArtistControllerTest {
 
     @Autowired
