@@ -1,0 +1,11 @@
+$kind: http-request
+name: 19. Laura (STAFF) marca ticket de Andrea como usado -> 200
+url: "{{baseUrl}}/api/tickets/{{ticketAndrea}}/use"
+method: PATCH
+headers:
+  Authorization: Bearer {{tokenLaura}}
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 200", () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 19000

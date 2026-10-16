@@ -1,0 +1,27 @@
+$kind: collection
+description: ""
+variables:
+  - key: baseUrl
+    value: http://localhost:8080
+    disabled: false
+  - key: tokenAndrea
+    value: ""
+    disabled: false
+  - key: tokenCarlos
+    value: ""
+    disabled: false
+  - key: tokenLaura
+    value: ""
+    disabled: false
+  - key: tokenMiguel
+    value: ""
+    disabled: false
+  - key: ticketAndrea
+    value: ""
+    disabled: false
+  - key: ticketCarlos
+    value: ""
+    disabled: false
+  - key: bearer_token_091p
+    secret: true
+    disabled: false

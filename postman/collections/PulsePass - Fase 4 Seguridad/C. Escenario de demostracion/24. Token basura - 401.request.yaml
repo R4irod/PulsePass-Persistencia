@@ -1,0 +1,12 @@
+$kind: http-request
+name: 24. Token basura -> 401
+url: "{{baseUrl}}/api/auth/me"
+method: GET
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 401", () => pm.response.to.have.status(401));
+    language: text/javascript
+  - type: beforeRequest
+    code: pm.request.headers.upsert({key:"Authorization", value:"{{bearer_token_091p}}"});
+    language: text/javascript
+order: 24000

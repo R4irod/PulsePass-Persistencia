@@ -1,0 +1,13 @@
+$kind: http-request
+name: GET /me Miguel -> roles ADMIN
+url: "{{baseUrl}}/api/auth/me"
+method: GET
+headers:
+  Authorization: Bearer {{tokenMiguel}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status 200", () => pm.response.to.have.status(200));
+      pm.test("Rol ADMIN (si falla, falta correr el seed SQL)", () => pm.expect(pm.response.json().roles).to.include("ADMIN"));
+    language: text/javascript
+order: 9000

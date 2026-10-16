@@ -1,0 +1,22 @@
+$kind: http-request
+name: 10. Carlos compra SU entrada -> 201
+url: "{{baseUrl}}/api/tickets"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{tokenCarlos}}
+body:
+  type: json
+  content: |-
+    {
+      "userEmail": "carlos@email.com",
+      "eventCode": "CMF-2026",
+      "type": "GENERAL"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status 201", () => pm.response.to.have.status(201));
+      pm.collectionVariables.set("ticketCarlos", pm.response.json().ticketCode);
+    language: text/javascript
+order: 10000

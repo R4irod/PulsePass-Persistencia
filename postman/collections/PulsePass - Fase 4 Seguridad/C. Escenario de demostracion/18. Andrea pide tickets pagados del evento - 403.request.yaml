@@ -1,0 +1,11 @@
+$kind: http-request
+name: 18. Andrea pide tickets pagados del evento -> 403
+url: "{{baseUrl}}/api/events/CMF-2026/tickets/paid"
+method: GET
+headers:
+  Authorization: Bearer {{tokenAndrea}}
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 403", () => pm.response.to.have.status(403));
+    language: text/javascript
+order: 18000

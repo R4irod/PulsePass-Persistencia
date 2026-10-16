@@ -1,0 +1,24 @@
+$kind: http-request
+name: 5. Registro duplicado -> 409
+url: "{{baseUrl}}/api/users"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "andrea",
+      "email": "andrea@email.com",
+      "firstName": "Andrea",
+      "lastName": "Gomez",
+      "phone": "3001234567",
+      "city": "Santa Marta",
+      "birthDate": "1999-05-20",
+      "password": "UnaFraseSegura2026!"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 409", () => pm.response.to.have.status(409));
+    language: text/javascript
+order: 5000

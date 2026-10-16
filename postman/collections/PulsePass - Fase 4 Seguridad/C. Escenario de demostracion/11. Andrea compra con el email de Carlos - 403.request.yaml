@@ -1,0 +1,20 @@
+$kind: http-request
+name: 11. Andrea compra con el email de Carlos -> 403
+url: "{{baseUrl}}/api/tickets"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{tokenAndrea}}
+body:
+  type: json
+  content: |-
+    {
+      "userEmail": "carlos@email.com",
+      "eventCode": "CMF-2026",
+      "type": "VIP"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 403", () => pm.response.to.have.status(403));
+    language: text/javascript
+order: 11000

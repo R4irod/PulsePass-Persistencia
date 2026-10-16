@@ -1,0 +1,18 @@
+$kind: http-request
+name: 23. Token con firma alterada -> 401
+url: "{{baseUrl}}/api/auth/me"
+method: GET
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 401", () => pm.response.to.have.status(401));
+    language: text/javascript
+  - type: beforeRequest
+    code: |-
+      const t = pm.collectionVariables.get("tokenAndrea");
+      const p = t.split(".");
+      const s = p[2]; const i = Math.floor(s.length/2);
+      const c = s[i] === "A" ? "B" : "A";
+      p[2] = s.substring(0,i) + c + s.substring(i+1);
+      pm.request.headers.upsert({key:"Authorization", value:"Bearer " + p.join(".")});
+    language: text/javascript
+order: 23000

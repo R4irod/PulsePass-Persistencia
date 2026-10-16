@@ -1,0 +1,22 @@
+$kind: http-request
+name: 3. Anonimo crea evento -> 401
+url: "{{baseUrl}}/api/events"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "eventCode": "TST-1",
+      "name": "Test",
+      "category": "MUSIC",
+      "eventDate": "2030-12-15T20:00:00",
+      "minimumAge": 18,
+      "venueCode": "VEN-SMR-01"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 401", () => pm.response.to.have.status(401));
+    language: text/javascript
+order: 3000

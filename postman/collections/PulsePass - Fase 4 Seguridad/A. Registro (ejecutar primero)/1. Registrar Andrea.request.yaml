@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/api/users"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "andrea",
+      "email": "andrea@email.com",
+      "firstName": "Andrea",
+      "lastName": "Gomez",
+      "phone": "3001234567",
+      "city": "Santa Marta",
+      "birthDate": "1999-05-20",
+      "password": "UnaFraseSegura2026!"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status 201", () => pm.response.to.have.status(201));
+      pm.test("La respuesta NO trae hash ni password", () => { const t = pm.response.text(); pm.expect(t).to.not.include("password"); pm.expect(t).to.not.include("$2a$"); });
+    language: text/javascript
+order: 1000

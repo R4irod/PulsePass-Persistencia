@@ -1,0 +1,11 @@
+$kind: http-request
+name: 17. Andrea intenta usar un ticket -> 403
+url: "{{baseUrl}}/api/tickets/{{ticketAndrea}}/use"
+method: PATCH
+headers:
+  Authorization: Bearer {{tokenAndrea}}
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 403", () => pm.response.to.have.status(403));
+    language: text/javascript
+order: 17000

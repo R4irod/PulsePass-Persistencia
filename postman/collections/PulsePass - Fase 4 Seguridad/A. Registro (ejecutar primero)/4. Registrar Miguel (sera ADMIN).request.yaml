@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/api/users"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "miguel",
+      "email": "miguel@email.com",
+      "firstName": "Miguel",
+      "lastName": "Torres",
+      "phone": "3001234567",
+      "city": "Santa Marta",
+      "birthDate": "1990-01-15",
+      "password": "UnaFraseSegura2026!"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 201", () => pm.response.to.have.status(201));
+    language: text/javascript
+order: 4000

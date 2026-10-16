@@ -1,0 +1,11 @@
+$kind: http-request
+name: 14. Andrea cancela ticket de Carlos -> 403
+url: "{{baseUrl}}/api/tickets/{{ticketCarlos}}/cancel"
+method: PATCH
+headers:
+  Authorization: Bearer {{tokenAndrea}}
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 403", () => pm.response.to.have.status(403));
+    language: text/javascript
+order: 14000

@@ -1,0 +1,11 @@
+$kind: http-request
+name: 6. Miguel (ADMIN) publica CMF-2026 -> 200
+url: "{{baseUrl}}/api/events/CMF-2026/publish"
+method: PATCH
+headers:
+  Authorization: Bearer {{tokenMiguel}}
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 200", () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 6000

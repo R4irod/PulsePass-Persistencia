@@ -1,0 +1,11 @@
+$kind: http-request
+name: 20. Laura lo usa otra vez -> 409 (regla de negocio)
+url: "{{baseUrl}}/api/tickets/{{ticketAndrea}}/use"
+method: PATCH
+headers:
+  Authorization: Bearer {{tokenLaura}}
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 409", () => pm.response.to.have.status(409));
+    language: text/javascript
+order: 20000

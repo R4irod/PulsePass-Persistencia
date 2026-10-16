@@ -1,0 +1,13 @@
+$kind: http-request
+name: 15. Andrea busca tickets de Carlos -> 403
+url: "{{baseUrl}}/api/tickets/by-user?email=carlos@email.com"
+method: GET
+headers:
+  Authorization: Bearer {{tokenAndrea}}
+queryParams:
+  email: carlos@email.com
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 403", () => pm.response.to.have.status(403));
+    language: text/javascript
+order: 15000

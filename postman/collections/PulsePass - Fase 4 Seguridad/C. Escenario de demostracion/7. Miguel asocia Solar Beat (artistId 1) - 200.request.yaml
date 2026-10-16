@@ -1,0 +1,11 @@
+$kind: http-request
+name: 7. Miguel asocia Solar Beat (artistId 1) -> 200
+url: "{{baseUrl}}/api/events/CMF-2026/artists/1"
+method: POST
+headers:
+  Authorization: Bearer {{tokenMiguel}}
+scripts:
+  - type: afterResponse
+    code: pm.test("Status 200", () => pm.response.to.have.status(200));
+    language: text/javascript
+order: 7000

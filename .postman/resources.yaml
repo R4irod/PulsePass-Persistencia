@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: 8a63f490-8b07-4925-8fa0-ff6497908c08
+
+cloudResources:
+  collections:
+    ../postman/collections/PulsePass - Fase 4 Seguridad: c0fb25a4-a1c5-4e2a-83e6-360aa4c662cd
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/
