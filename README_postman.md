@@ -37,7 +37,7 @@ Repository / PostgreSQL
 - MapStruct, Bean Validation
 - JUnit 5, Mockito, AssertJ, MockMvc, `spring-security-test`, Testcontainers
 
-## Requisitos para ejecutar
+## Requisitos para la ejecucion
 
 - JDK 21
 - PostgreSQL con una base de datos creada (por ejemplo `pulsepass`)
