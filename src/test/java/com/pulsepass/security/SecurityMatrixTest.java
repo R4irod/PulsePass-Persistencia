@@ -73,6 +73,32 @@ class SecurityMatrixTest {
     @MockitoBean private UserService userService;
     @MockitoBean private TicketService ticketService;
     @MockitoBean private AuthService authService;
+    @MockitoBean private com.pulsepass.service.AdminRoleService adminRoleService;
+
+    @Test
+    void roleManagementIsAdminOnly() throws Exception {
+        mockMvc.perform(get("/api/admin/users/lookup").param("identifier", "test"))
+                .andExpect(status().isUnauthorized());
+        for (Long id : new Long[]{USER_ID, STAFF_ID}) {
+            mockMvc.perform(get("/api/admin/users/lookup").param("identifier", "test")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(id)))
+                    .andExpect(status().isForbidden());
+            mockMvc.perform(post("/api/admin/users/1/roles")
+                    .header(HttpHeaders.AUTHORIZATION, bearer(id))
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"ADMIN\"}"))
+                    .andExpect(status().isForbidden());
+        }
+        verifyNoInteractions(adminRoleService);
+        mockMvc.perform(post("/api/admin/users/1/roles")
+                .header(HttpHeaders.AUTHORIZATION, bearer(ADMIN_ID))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"STAFF\"}"))
+                .andExpect(status().isOk());
+        verify(adminRoleService).add(1L, com.pulsepass.domain.Role.STAFF);
+        mockMvc.perform(post("/api/admin/users/1/roles")
+                .header(HttpHeaders.AUTHORIZATION, bearer(ADMIN_ID))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"INVALID\"}"))
+                .andExpect(status().isBadRequest());
+    }
 
     @BeforeEach
     void setUp() {
